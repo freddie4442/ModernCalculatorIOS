@@ -1,0 +1,58 @@
+
+name: Build Kivy iOS Project
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ModernCalculatorIOS/**"
+      - ".github/workflows/ios-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    timeout-minutes: 180
+
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Check Xcode
+        run: |
+          xcode-select -p
+          xcodebuild -version
+
+      - name: Install system dependencies
+        run: |
+          brew update
+          brew install autoconf automake libtool pkg-config
+          brew link libtool
+
+      - name: Install Kivy iOS toolchain
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install "Cython==3.0.11" kivy-ios
+
+      - name: Compile Kivy for iOS
+        run: |
+          toolchain build kivy
+
+      - name: Generate Xcode project
+        run: |
+          toolchain create ModernCalculatorIOS "$GITHUB_WORKSPACE/ModernCalculatorIOS"
+
+      - name: Upload Xcode project
+        uses: actions/upload-artifact@v7
+        with:
+          name: ModernCalculatorIOS-Xcode-project
+          path: ModernCalculatorIOS-ios/
+          if-no-files-found: error
+          retention-days: 7
